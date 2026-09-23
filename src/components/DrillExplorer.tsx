@@ -129,6 +129,7 @@ export function DrillExplorer() {
   return (
     <Panel
       className="explorer"
+      drillable
       title={title}
       subtitle={subtitle}
       legend={

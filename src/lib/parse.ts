@@ -36,8 +36,12 @@ export interface SkippedRow {
   detail: string;
 }
 
+export type DataSourceKind = 'csv' | 'sheets' | 'demo';
+
 export interface ParseReport {
   fileName: string;
+  /** Where the rows came from (absent in reports saved before Sheets support). */
+  source?: DataSourceKind;
   loadedAt: string;
   /** Non-blank data rows in the file. */
   totalRows: number;
@@ -53,6 +57,7 @@ export interface ParseReport {
 
 export interface ParseOptions {
   fileName?: string;
+  source?: DataSourceKind;
   defaultCurrency?: string;
   now?: Date;
 }
@@ -77,21 +82,39 @@ export function detectColumns(headers: string[]): Record<ColumnRole, number> {
   return out;
 }
 
+export interface ParseResult {
+  transactions: RawTransaction[];
+  report: ParseReport;
+}
+
 /**
  * Parse CSV text into transactions plus a report of everything skipped.
  * Throws CsvFormatError only when the file as a whole is unusable
  * (e.g. no amount or date column); bad rows are skipped and reported.
  */
-export function parseCsvText(
-  text: string,
-  { fileName = 'data.csv', defaultCurrency = 'EUR', now = new Date() }: ParseOptions = {},
-): { transactions: RawTransaction[]; report: ParseReport } {
+export function parseCsvText(text: string, opts: ParseOptions = {}): ParseResult {
   const parsed = Papa.parse<string[]>(text.replace(/^﻿/, ''), { skipEmptyLines: false });
-  const rows = parsed.data;
+  const quoteWarnings = parsed.errors
+    .filter((e) => e.type === 'Quotes')
+    .slice(0, 3)
+    .map((e) => `CSV quoting problem near line ${(e.row ?? 0) + 1}: ${e.message}`);
+  return parseRows(parsed.data, { fileName: 'data.csv', source: 'csv', ...opts }, quoteWarnings);
+}
+
+/**
+ * Turn a grid of cells (CSV rows, or a Google Sheets tab) into transactions.
+ * The first non-blank row is the header; row numbers in the report are 1-based
+ * positions in the grid, which match spreadsheet row numbers.
+ */
+export function parseRows(
+  rows: string[][],
+  { fileName = 'data', source, defaultCurrency = 'EUR', now = new Date() }: ParseOptions = {},
+  extraWarnings: string[] = [],
+): ParseResult {
   const isBlank = (r: string[]) => r.every((c) => !c || !c.trim());
 
   const headerIdx = rows.findIndex((r) => !isBlank(r));
-  if (headerIdx < 0) throw new CsvFormatError('The file is empty.');
+  if (headerIdx < 0) throw new CsvFormatError('No data found: the file or sheet is empty.');
   const header = rows[headerIdx].map((h) => h.trim());
   const col = detectColumns(header);
 
@@ -214,9 +237,7 @@ export function parseCsvText(
   if (dayMismatch > 0) {
     warnings.push(`${dayMismatch} row(s) had a day that didn't match their month column; the day was ignored.`);
   }
-  for (const e of parsed.errors.filter((e) => e.type === 'Quotes').slice(0, 3)) {
-    warnings.push(`CSV quoting problem near line ${(e.row ?? 0) + 1}: ${e.message}`);
-  }
+  warnings.push(...extraWarnings);
 
   const columns = {} as Record<ColumnRole, string | null>;
   for (const role of Object.keys(col) as ColumnRole[]) columns[role] = col[role] >= 0 ? header[col[role]] : null;
@@ -225,6 +246,7 @@ export function parseCsvText(
     transactions,
     report: {
       fileName,
+      source,
       loadedAt: now.toISOString(),
       totalRows,
       kept: transactions.length,

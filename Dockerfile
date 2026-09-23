@@ -11,6 +11,10 @@ RUN npm ci --no-audit --no-fund
 # .dockerignore keeps CSVs, data/, node_modules and dist out of the context,
 # so personal data can never be baked into an image layer.
 COPY . .
+# Optional: enables "Load from Google Sheets". Vite bakes it into the bundle.
+# docker compose passes it from your .env file.
+ARG VITE_GOOGLE_CLIENT_ID=""
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 RUN npm test && npm run build
 
 # ---- Stage 2: serve the static files with nginx ------------------------------

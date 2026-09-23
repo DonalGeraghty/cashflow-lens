@@ -8,13 +8,20 @@ import { pushSteps, type DrillStep } from '../lib/drill';
 import { DEFAULT_PIVOT, type PivotConfig } from '../lib/pivot';
 import type { ParseReport } from '../lib/parse';
 
-export type Tab = 'dashboard' | 'transactions' | 'pivot' | 'data';
+export type Tab = 'dashboard' | 'transactions' | 'pivot' | 'waterfall' | 'flow' | 'data';
 export type Theme = 'system' | 'light' | 'dark';
 
 export interface SavedPivot {
   id: string;
   name: string;
   config: PivotConfig;
+}
+
+/** The Google Sheet to refresh from. Only the IDs are stored; never the access token. */
+export interface SheetSource {
+  spreadsheetId: string;
+  tab: string;
+  title: string;
 }
 
 /** Transactions shown in the "peek" dialog (right-click / long-press / pivot cell). */
@@ -29,6 +36,7 @@ export interface AppState {
   report: ParseReport | null;
   rules: CategoryRule[];
   rulesOverride: boolean;
+  sheetSource: SheetSource | null;
 
   // ---- view state ----
   filters: Filters;
@@ -45,6 +53,7 @@ export interface AppState {
   loadData: (transactions: RawTransaction[], report: ParseReport) => void;
   clearData: () => void;
   resetEverything: () => void;
+  setSheetSource: (s: SheetSource | null) => void;
 
   addRule: (rule?: Partial<CategoryRule>) => void;
   updateRule: (id: string, patch: Partial<CategoryRule>) => void;
@@ -112,6 +121,7 @@ export const useAppStore = create<AppState>()(
       report: null,
       rules: defaultRules(),
       rulesOverride: false,
+      sheetSource: null,
       filters: DEFAULT_FILTERS,
       drill: [],
       pivot: DEFAULT_PIVOT,
@@ -131,6 +141,7 @@ export const useAppStore = create<AppState>()(
           report: null,
           rules: defaultRules(),
           rulesOverride: false,
+          sheetSource: null,
           filters: DEFAULT_FILTERS,
           drill: [],
           pivot: DEFAULT_PIVOT,
@@ -139,6 +150,7 @@ export const useAppStore = create<AppState>()(
           tab: 'dashboard',
         });
       },
+      setSheetSource: (sheetSource) => set({ sheetSource }),
 
       addRule: (rule) =>
         set((s) => ({
@@ -211,6 +223,7 @@ export const useAppStore = create<AppState>()(
         report: s.report,
         rules: s.rules,
         rulesOverride: s.rulesOverride,
+        sheetSource: s.sheetSource,
         pivot: s.pivot,
         savedPivots: s.savedPivots,
         theme: s.theme,

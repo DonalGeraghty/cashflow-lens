@@ -1,54 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../store/useAppStore';
-import { CsvFormatError, parseCsvText } from '../lib/parse';
-import { generateDemoCsv } from '../lib/demo';
-
-type Notice = { kind: 'ok' | 'error'; text: string } | null;
-
-/** Hook that parses a CSV file (or text) into the store and reports the result. */
-export function useCsvLoader() {
-  const loadData = useAppStore((s) => s.loadData);
-  const [notice, setNotice] = useState<Notice>(null);
-
-  const loadText = useCallback(
-    (text: string, fileName: string) => {
-      try {
-        const { transactions, report } = parseCsvText(text, { fileName });
-        if (!transactions.length) {
-          setNotice({ kind: 'error', text: `No usable rows in ${fileName} (${report.skipped.length} skipped). See Data & rules for details.` });
-          return;
-        }
-        loadData(transactions, report);
-        const skipped = report.skipped.length ? ` · ${report.skipped.length} rows skipped (see Data & rules)` : '';
-        setNotice({ kind: 'ok', text: `Loaded ${report.kept.toLocaleString('en-IE')} transactions from ${fileName}${skipped}` });
-      } catch (e) {
-        setNotice({ kind: 'error', text: e instanceof CsvFormatError ? e.message : `Couldn't read ${fileName}: ${(e as Error).message}` });
-      }
-    },
-    [loadData],
-  );
-
-  const loadFile = useCallback(
-    async (file: File) => {
-      if (!/\.(csv|txt)$/i.test(file.name) && file.type && !file.type.includes('csv') && !file.type.startsWith('text/')) {
-        setNotice({ kind: 'error', text: `${file.name} doesn't look like a CSV file.` });
-        return;
-      }
-      loadText(await file.text(), file.name);
-    },
-    [loadText],
-  );
-
-  const loadDemo = useCallback(() => loadText(generateDemoCsv(), 'demo-data.csv'), [loadText]);
-
-  return { loadFile, loadDemo, notice, clearNotice: () => setNotice(null) };
-}
+import type { DataLoader } from '../hooks/useDataLoader';
 
 /** "Load CSV" button plus a full-window drop target. */
-export function FileLoader({ loader }: { loader: ReturnType<typeof useCsvLoader> }) {
+export function FileLoader({ loader }: { loader: DataLoader }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
-  const { loadFile, notice, clearNotice } = loader;
+  const { loadFile, notice, clearNotice, busy, refreshSheet, sheetsEnabled } = loader;
+  const sheet = useAppStore((st) => st.sheetSource);
 
   useEffect(() => {
     let depth = 0;
@@ -93,6 +52,11 @@ export function FileLoader({ loader }: { loader: ReturnType<typeof useCsvLoader>
 
   return (
     <>
+      {sheetsEnabled && sheet && (
+        <button type="button" onClick={() => void refreshSheet()} disabled={Boolean(busy)} title={`Reload ${sheet.title} › ${sheet.tab} from Google Sheets`}>
+          {busy ?? '↻ Refresh sheet'}
+        </button>
+      )}
       <button type="button" className="primary" onClick={() => inputRef.current?.click()}>
         Load CSV
       </button>

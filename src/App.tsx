@@ -5,7 +5,9 @@ import { useTheme } from './hooks/useTheme';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { DataPanel } from './components/DataPanel';
 import { EmptyState } from './components/EmptyState';
-import { FileLoader, useCsvLoader } from './components/FileLoader';
+import { FileLoader } from './components/FileLoader';
+import { SheetsSource } from './components/SheetsSource';
+import { useDataLoader } from './hooks/useDataLoader';
 import { FilterBar } from './components/FilterBar';
 import { PeekDialog } from './components/PeekDialog';
 import { RulesEditor } from './components/RulesEditor';
@@ -13,12 +15,16 @@ import { SummaryStrip } from './components/SummaryStrip';
 import { TransactionTable } from './components/TransactionTable';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { PivotView } from './components/pivot/PivotView';
+import { WaterfallView } from './components/WaterfallView';
+import { FlowView } from './components/FlowView';
 import { Panel } from './components/Panel';
 
 const TABS: { id: Tab; label: string }[] = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'transactions', label: 'Transactions' },
   { id: 'pivot', label: 'Pivot' },
+  { id: 'waterfall', label: 'Waterfall' },
+  { id: 'flow', label: 'Money flow' },
   { id: 'data', label: 'Data & rules' },
 ];
 
@@ -36,7 +42,7 @@ function Shell() {
   const tab = useAppStore((s) => s.tab);
   const setTab = useAppStore((s) => s.setTab);
   const hasData = useAppStore((s) => s.transactions.length > 0);
-  const loader = useCsvLoader();
+  const loader = useDataLoader();
 
   return (
     <div className="app" data-tab={tab}>
@@ -72,6 +78,7 @@ function Shell() {
       <main>
         {tab === 'data' ? (
           <div className="stack">
+            <SheetsSource loader={loader} />
             <DataPanel />
             <RulesEditor />
           </div>
@@ -83,6 +90,8 @@ function Shell() {
             {tab === 'dashboard' && <Dashboard />}
             {tab === 'transactions' && <TransactionsTab />}
             {tab === 'pivot' && <PivotView />}
+            {tab === 'waterfall' && <WaterfallView />}
+            {tab === 'flow' && <FlowView />}
           </>
         )}
       </main>

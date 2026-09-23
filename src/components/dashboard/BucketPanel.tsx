@@ -19,6 +19,7 @@ export function BucketPanel() {
   return (
     <Panel
       title="Spending by bucket"
+      drillable
       subtitle="Fixed essentials vs variable essentials vs discretionary"
       legend={buckets.map((b) => (
         <LegendItem key={b} cls={bucketClass(b, buckets)}>

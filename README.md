@@ -1,11 +1,12 @@
 # Cashflow Lens
 
-A personal finance dashboard that runs entirely in your browser. Load a CSV export,
-then explore income vs spending, categories, merchants, month-over-month changes,
+A personal finance dashboard that runs entirely in your browser. Load a CSV export, or
+pull straight from your Google Sheet, then explore income vs spending, categories, merchants, month-over-month changes,
 recurring payments and a pivot table, with drill-down that keeps every view in sync.
 
-**Your data never leaves your machine.** There is no backend and no database. The CSV
-is parsed in the browser and kept only in that browser's `localStorage`.
+**No backend, no database.** CSVs are parsed in the browser and kept only in that browser's
+`localStorage`. If you connect a Google Sheet, the data travels only between Google and your
+browser, read-only.
 
 Built with React 19, TypeScript, Vite, D3 v7, Zustand and Papa Parse. Tests use Vitest.
 
@@ -40,7 +41,8 @@ Production build served by nginx:
 docker compose up -d --build     # build the image and start it in the background
 ```
 
-Open **http://127.0.0.1:8080**.
+Open **http://localhost:8080**. The container only listens on your own machine. Use
+`localhost` rather than `127.0.0.1`, because Google sign-in (for Sheets) only accepts `localhost`.
 
 | Task | Command |
 |---|---|
@@ -55,7 +57,7 @@ Dev server with hot reload inside Docker (the source is mounted as a volume):
 docker compose --profile dev up dev
 ```
 
-Open **http://127.0.0.1:5173**. Stop it with `Ctrl+C`, or run
+Open **http://localhost:5173**. Stop it with `Ctrl+C`, or run
 `docker compose --profile dev down`. If you change `package.json`, restart the
 dev service (it runs `npm install` on start). To reset its dependency volume, run
 `docker compose --profile dev down -v`.
@@ -116,26 +118,76 @@ Other common layouts also work: `Date` as `DD/MM/YYYY` or ISO, `Payee`/`Merchant
 - `.dockerignore` keeps the same files out of the Docker build context, so they can never end up
   in an image layer.
 - The Vite dev server is configured (`server.fs.deny`) to refuse to serve CSVs or `data/`.
-- nginx sends a Content-Security-Policy with `connect-src 'self'`, so the page can't send data
-  to any other host.
+- nginx sends a Content-Security-Policy whose `connect-src` allows only the app itself, the
+  Google Sheets API and Google sign-in. The page can't send data anywhere else.
 - **Data & rules → Reset everything** wipes the data, rules and saved layouts from the browser.
+
+### Google Sheets
+
+You can load straight from your spreadsheet instead of exporting a CSV. CSV loading still works;
+whichever you loaded last is what the app shows. Access is **read-only**, the sign-in token is
+kept **in memory only** (never saved), and data comes straight from Google to your browser.
+
+**One-time setup (about 10 minutes):**
+
+1. Go to [console.cloud.google.com](https://console.cloud.google.com/) and create a project
+   (e.g. "Cashflow Lens").
+2. **APIs & Services → Library**, search for **Google Sheets API**, and click **Enable**.
+3. **Google Auth Platform** (or **OAuth consent screen**) → **Get started**:
+   - App name: anything, e.g. "Cashflow Lens". Support email: yours.
+   - Audience: **External**, and leave it in **Testing**.
+   - **Test users**: add your own Google address.
+4. **Clients → Create client** → **Web application**. Under **Authorized JavaScript origins** add:
+   - `http://localhost:5173` (npm run dev / dev container)
+   - `http://localhost:4173` (npm run preview)
+   - `http://localhost:8080` (Docker)
+
+   No redirect URIs are needed.
+5. Copy the **Client ID** (ends in `.apps.googleusercontent.com`) into a file called `.env` in
+   the project folder. `.env` is git-ignored; see `.env.example`.
+   ```
+   VITE_GOOGLE_CLIENT_ID=1234567890-abc123.apps.googleusercontent.com
+   ```
+6. Restart `npm run dev`, or rebuild Docker with `docker compose up -d --build`. Compose reads
+   the same `.env`.
+
+**Using it:** **Data & rules → Google Sheets**. Paste your sheet's URL, click **Connect** and sign
+in, pick the tab (e.g. "Fin Data"), then click **Load this tab**. After that, **↻ Refresh sheet**
+in the top bar reloads it whenever you like.
+
+- Because the app is in "Testing" mode, Google shows a "Google hasn't verified this app" screen.
+  That's expected for your own private app: click **Continue**.
+- The tab's first row must be the header, with the same columns as the CSV. Cells are read
+  exactly as displayed in Sheets, so `-€1,307.63` and `May 2025` parse just like the CSV export.
+- The sign-in lasts about an hour. After that, the next Refresh opens a quick Google popup,
+  which usually closes by itself.
+- To revoke access, click **Disconnect** in the app, or visit
+  [myaccount.google.com/permissions](https://myaccount.google.com/permissions).
 
 ---
 
 ## Using it
 
-- **Load data**: use **Load CSV**, or drag a file anywhere onto the page. **Try it with demo
+- **Load data**: use **Load CSV**, drag a file anywhere onto the page, or connect a Google Sheet
+  (see above). **Try it with demo
   data** loads a generated sample.
 - **Filters** (top bar): period, account, category and bucket. They apply to every chart,
   the summary, the table and the pivot.
 - **Drill-down**: click a month, then a category, then a merchant. The breadcrumb
   (`All › 2026 › August › Supermarket`) jumps back to any level, and `←` or the browser Back
-  button goes up one level. The path is stored in the URL (`?drill=…`), so a refresh keeps your place.
+  button goes up one level. Each drillable chart also shows a **← Back to …** button while you're
+  drilled in. The path is stored in the URL (`?drill=…`), so a refresh keeps your place.
 - **Peek**: right-click a chart element (or long-press it on touch, or press `Shift+F10` on a
   focused bar) to see its transactions without drilling.
 - **Pivot**: pick row, column and filter fields, the value and the aggregation. Click `▸` to
   collapse a group and click a header to sort. Click any number to see the transactions behind
-  it. You can export the view to CSV and save named layouts.
+  it. You can export the view to CSV and save named layouts. On wide screens it uses the full window width.
+- **Waterfall**: *Net by month* stacks each month's net (income − spending) into a running total
+  that ends at the total saved. *Where the income went* steps from income sources down through
+  spending categories to net savings.
+- **Money flow**: a Sankey diagram of income sources → Income → spending buckets (plus Saved) →
+  categories, where flow width shows the money. If you spent more than you earned, a
+  *From savings* flow makes up the difference. Click a node or flow to drill in.
 - **Rules**: under **Data & rules**, keyword and regex rules fill in missing categories (or
   override the CSV's categories if you switch that on). The first matching rule wins. Changes
   apply immediately and are saved.
@@ -146,8 +198,10 @@ Other common layouts also work: `Date` as `DD/MM/YYYY` or ISO, `Payee`/`Merchant
 
 ```
 src/
-  lib/          Pure logic, no React. Unit tested.
-    parse.ts        CSV -> transactions + skipped-row report (Papa Parse)
+  lib/          Pure logic, no React. Unit tested (except googleAuth.ts, the browser sign-in glue).
+    parse.ts        CSV or sheet rows -> transactions + skipped-row report (Papa Parse)
+    sheets.ts       read-only Google Sheets API client (tabs, formatted cell values)
+    googleAuth.ts   Google sign-in popup; access token kept in memory only
     amount.ts       money parsing
     dates.ts        month/day parsing and month maths
     merchant.ts     description -> merchant, estimate detection
@@ -157,8 +211,10 @@ src/
     aggregate.ts    monthly totals, summary, spend by key, MoM change, buckets
     recurring.ts    recurring payment detection
     pivot.ts        pivot engine: tree, subtotals, sorting, drill-through, export
+    waterfall.ts    waterfall steps (net by month; income → categories → net)
+    flow.ts         Sankey graph (income → buckets → categories)
   store/        Zustand store (single source of truth) + derived-data context
-  hooks/        URL sync, theme, resize, peek
+  hooks/        data loading (CSV / demo / Sheets), URL sync, theme, resize, peek
   charts/       D3 charts and shared D3 helpers
   components/   UI: filter bar, breadcrumbs, summary, tables, pivot, rules, dashboard panels
 ```
@@ -204,6 +260,14 @@ corners). This lets D3 tween any bar into any other. When you drill, the next vi
 out of the bar you clicked. When you go back up, the view collapses into the bar you came from.
 
 ## Troubleshooting
+
+- **Google: "origin_mismatch" / "redirect_uri_mismatch"**: the address in your browser must be
+  listed exactly under *Authorized JavaScript origins*. Use `localhost`, not `127.0.0.1`.
+- **Google: "access_denied"**: add your Google account as a **Test user** on the consent screen.
+- **"The Google Sheets API isn't enabled"**: enable it under APIs & Services → Library (step 2).
+- **The Google popup doesn't appear**: allow popups for `localhost` in your browser.
+- **The Sheets option says "Not set up"**: `.env` is missing `VITE_GOOGLE_CLIENT_ID`, or the dev
+  server or Docker image wasn't restarted or rebuilt after adding it.
 
 - **"No amount column found"**: check the header row. See *Expected CSV* above.
 - **Nothing saves between refreshes**: the browser may be blocking site data (private window).

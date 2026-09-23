@@ -1,6 +1,9 @@
-import type { useCsvLoader } from './FileLoader';
+import type { DataLoader } from '../hooks/useDataLoader';
+import { useAppStore } from '../store/useAppStore';
 
-export function EmptyState({ loader }: { loader: ReturnType<typeof useCsvLoader> }) {
+export function EmptyState({ loader }: { loader: DataLoader }) {
+  const sheet = useAppStore((s) => s.sheetSource);
+  const setTab = useAppStore((s) => s.setTab);
   return (
     <div className="empty-state">
       <h1>See where your money goes</h1>
@@ -12,9 +15,21 @@ export function EmptyState({ loader }: { loader: ReturnType<typeof useCsvLoader>
         <code>Debit</code>/<code>Credit</code>), and optionally <code>Bank</code>/<code>Account</code>, <code>Type</code>/<code>Category</code>,{' '}
         <code>Spending Bucket</code>, <code>Currency</code>.
       </p>
-      <button type="button" onClick={loader.loadDemo}>
-        Try it with demo data
-      </button>
+      <div className="empty-actions">
+        {loader.sheetsEnabled &&
+          (sheet ? (
+            <button type="button" className="primary" onClick={() => void loader.refreshSheet()} disabled={Boolean(loader.busy)}>
+              {loader.busy ?? `Load ${sheet.title} › ${sheet.tab} from Google Sheets`}
+            </button>
+          ) : (
+            <button type="button" className="primary" onClick={() => setTab('data')}>
+              Connect a Google Sheet
+            </button>
+          ))}
+        <button type="button" onClick={loader.loadDemo}>
+          Try it with demo data
+        </button>
+      </div>
     </div>
   );
 }

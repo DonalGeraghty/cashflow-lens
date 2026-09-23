@@ -66,6 +66,7 @@ export function ChangePanel() {
   return (
     <Panel
       title="What changed"
+      drillable
       subtitle={month ? `${monthLabel(month, 'long')} vs ${baseline === 'prev' ? monthLabel(addMonths(month, -1), 'long') : 'the 3 months before'}` : 'Needs at least two months of data'}
       controls={
         <>

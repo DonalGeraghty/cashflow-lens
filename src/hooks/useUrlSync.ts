@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { decodeDrill, encodeDrill } from '../lib/drill';
 import { useAppStore, type Tab } from '../store/useAppStore';
 
-const TABS: Tab[] = ['dashboard', 'transactions', 'pivot', 'data'];
+const TABS: Tab[] = ['dashboard', 'transactions', 'pivot', 'waterfall', 'flow', 'data'];
 
 function readUrl() {
   const p = new URLSearchParams(window.location.search);

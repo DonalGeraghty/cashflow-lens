@@ -6,6 +6,18 @@ function fmt(key: string, make: () => Intl.NumberFormat) {
 }
 
 export function formatMoney(v: number, currency = 'EUR', opts: { compact?: boolean; sign?: boolean } = {}): string {
+  // Compact amounts under 1,000 read better as whole euros ("€937", not "€936.5").
+  if (opts.compact && Math.abs(v) < 1000) {
+    return fmt(`w|${currency}|${opts.sign}`, () =>
+      new Intl.NumberFormat('en-IE', {
+        style: 'currency',
+        currency,
+        maximumFractionDigits: 0,
+        minimumFractionDigits: 0,
+        signDisplay: opts.sign ? 'exceptZero' : 'auto',
+      }),
+    ).format(v);
+  }
   const key = `m|${currency}|${opts.compact}|${opts.sign}`;
   const f = fmt(key, () =>
     new Intl.NumberFormat('en-IE', {

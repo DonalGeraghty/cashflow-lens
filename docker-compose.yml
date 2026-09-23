@@ -1,11 +1,16 @@
 services:
-  # Production-style build served by nginx: http://127.0.0.1:8080
+  # Production-style build served by nginx: http://localhost:8080
   app:
-    build: .
+    build:
+      context: .
+      args:
+        # Read from .env next to this file (optional; see README → Google Sheets).
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     image: cashflow-lens:latest
     container_name: cashflow-lens
     ports:
       # Bound to loopback only, so other devices on your network can't reach it.
+      # Open it as http://localhost:8080 (Google sign-in doesn't accept raw IPs).
       - "127.0.0.1:8080:80"
     restart: unless-stopped
     read_only: true

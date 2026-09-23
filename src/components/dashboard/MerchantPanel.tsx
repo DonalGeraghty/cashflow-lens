@@ -55,6 +55,7 @@ export function MerchantPanel() {
   return (
     <Panel
       title="Top merchants"
+      drillable
       subtitle="By total spend, refunds netted"
       controls={
         <Segmented<TopN>

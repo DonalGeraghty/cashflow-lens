@@ -55,6 +55,7 @@ export function CategoryPanel() {
   return (
     <Panel
       title="Spending by category"
+      drillable
       subtitle={scope}
       controls={
         <Segmented<Mode>

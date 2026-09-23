@@ -31,6 +31,7 @@ export function RecurringPanel() {
     <Panel
       className="recurring-panel"
       title="Recurring payments"
+      drillable
       subtitle={
         activeOut.length
           ? `${activeOut.length} active outgoing: about ${formatMoney(monthly, currency)} a month, ${formatMoney(monthly * 12, currency)} a year`

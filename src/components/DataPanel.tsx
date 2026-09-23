@@ -1,6 +1,8 @@
 import { useAppStore } from '../store/useAppStore';
 import { Panel } from './Panel';
 
+const SOURCE_LABEL = { csv: 'CSV file', sheets: 'Google Sheets', demo: 'Demo data' } as const;
+
 /** Import report (what was kept, what was skipped and why) plus the reset controls. */
 export function DataPanel() {
   const report = useAppStore((s) => s.report);
@@ -11,7 +13,7 @@ export function DataPanel() {
   return (
     <Panel
       title="Loaded data"
-      subtitle="Everything stays in this browser. Nothing is uploaded anywhere."
+      subtitle="Stored only in this browser. Nothing is uploaded anywhere."
       controls={
         <>
           <button
@@ -37,12 +39,16 @@ export function DataPanel() {
     >
       {storageError && <p className="banner warn">{storageError}</p>}
       {!report ? (
-        <p className="muted">No file loaded.</p>
+        <p className="muted">Nothing loaded yet.</p>
       ) : (
         <div className="report">
           <dl className="report-stats">
             <div>
-              <dt>File</dt>
+              <dt>Source</dt>
+              <dd>{SOURCE_LABEL[report.source ?? 'csv']}</dd>
+            </div>
+            <div>
+              <dt>{report.source === 'sheets' ? 'Sheet' : 'File'}</dt>
               <dd>{report.fileName}</dd>
             </div>
             <div>

@@ -51,7 +51,7 @@ function Shell() {
           <svg viewBox="0 0 32 32" width="22" height="22" aria-hidden="true">
             <rect x="4" y="15" width="6" height="13" rx="1.5" className="fill-income" />
             <rect x="13" y="9" width="6" height="19" rx="1.5" className="fill-spend" />
-            <rect x="22" y="4" width="6" height="24" rx="1.5" className="fill-s3" />
+            <rect x="22" y="4" width="6" height="24" rx="1.5" className="fill-saved" />
           </svg>
           Cashflow Lens
         </div>

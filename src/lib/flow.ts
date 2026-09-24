@@ -1,6 +1,6 @@
 import type { Kind, Transaction } from '../types';
 import { orderBuckets, spendOf } from './aggregate';
-import { bucketOf } from './filters';
+import { NO_BUCKET, bucketOf } from './filters';
 import type { DrillStep } from './drill';
 
 /** Which rows a node or link stands for. Used for drill-down and "peek". */
@@ -127,9 +127,14 @@ export function buildFlow(txns: Transaction[], { maxIncome = 5, categories = tru
   // Column 2: buckets in their usual order, then Saved.
   const bucketTotals = new Map<string, number>();
   for (const p of positive) bucketTotals.set(p.bucket, (bucketTotals.get(p.bucket) ?? 0) + p.spend);
-  for (const bucket of orderBuckets([...bucketTotals.keys()])) {
-    nodes.push({ id: `bucket|${bucket}`, label: bucket, column: 2, role: 'bucket', bucket, match: { kind: 'expense', bucket } });
-    links.push({ id: `${hubId}>bucket|${bucket}`, source: hubId, target: `bucket|${bucket}`, value: round2(bucketTotals.get(bucket)!), bucket, match: { kind: 'expense', bucket } });
+  const bucketList = orderBuckets([...bucketTotals.keys()]);
+  // With no bucket data at all, the single "(none)" bucket is simply all spending.
+  const noBuckets = bucketList.length === 1 && bucketList[0] === NO_BUCKET;
+  for (const bucket of bucketList) {
+    const label = bucket !== NO_BUCKET ? bucket : noBuckets ? 'Spent' : 'No bucket';
+    const match: FlowMatch = noBuckets ? { kind: 'expense' } : { kind: 'expense', bucket };
+    nodes.push({ id: `bucket|${bucket}`, label, column: 2, role: 'bucket', bucket, match });
+    links.push({ id: `${hubId}>bucket|${bucket}`, source: hubId, target: `bucket|${bucket}`, value: round2(bucketTotals.get(bucket)!), bucket, match });
   }
   if (saved > 0) {
     nodes.push({ id: 'saved', label: 'Saved', column: 2, role: 'saved', match: null });
@@ -163,7 +168,8 @@ export function buildFlow(txns: Transaction[], { maxIncome = 5, categories = tru
         target: `cat|${p.category}`,
         value: p.spend,
         bucket: p.bucket,
-        match: { kind: 'expense', bucket: p.bucket, category: p.category },
+        // No "(none)" step in the breadcrumb when there are no buckets at all.
+        match: noBuckets ? { kind: 'expense', category: p.category } : { kind: 'expense', bucket: p.bucket, category: p.category },
       });
     }
   }

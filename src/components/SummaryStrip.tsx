@@ -3,6 +3,7 @@ import { useData } from '../store/DataContext';
 import { summarise } from '../lib/aggregate';
 import { formatMoney, formatPct } from '../lib/format';
 import { bucketClass } from '../charts/BucketChart';
+import { NO_BUCKET } from '../lib/filters';
 
 /** Total in, total out, net and savings rate for whatever is currently filtered + drilled. */
 export function SummaryStrip() {
@@ -10,6 +11,8 @@ export function SummaryStrip() {
   const s = useMemo(() => summarise(filtered), [filtered]);
   const bucketNames = s.byBucket.map((b) => b.bucket);
   const positive = s.byBucket.filter((b) => b.spend > 0);
+  // Data without a Spending Bucket column: a single "(none) 100%" bar says nothing.
+  const noBuckets = positive.length === 1 && positive[0].bucket === NO_BUCKET;
   const bucketTotal = positive.reduce((sum, b) => sum + b.spend, 0);
 
   return (
@@ -20,7 +23,9 @@ export function SummaryStrip() {
       <Stat label="Savings rate" value={s.savingsRate === null ? '–' : formatPct(s.savingsRate)} note={s.savingsRate === null ? 'No income in selection' : undefined} />
       <div className="stat stat-wide">
         <div className="stat-label">Where the money went</div>
-        {bucketTotal > 0 ? (
+        {noBuckets ? (
+          <div className="stat-note">No spending buckets in this data. Add a “Spending Bucket” column to see Fixed / Variable / Discretionary.</div>
+        ) : bucketTotal > 0 ? (
           <>
             <div className="meter" role="img" aria-label={positive.map((b) => `${b.bucket} ${formatPct(b.spend / bucketTotal)}`).join(', ')}>
               {positive.map((b) => (

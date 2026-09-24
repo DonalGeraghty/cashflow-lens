@@ -3,6 +3,7 @@ import * as d3 from 'd3';
 import { useElementWidth } from '../hooks/useElementWidth';
 import { useLatest } from '../hooks/useLatest';
 import type { BucketMonth } from '../lib/aggregate';
+import { NO_BUCKET } from '../lib/filters';
 import { MONTH_SHORT, monthLabel, parseMonthKey } from '../lib/dates';
 import { formatMoney, formatPct } from '../lib/format';
 import { joinBars, type BarMark } from './bars';
@@ -23,16 +24,17 @@ const GAP = 2; // surface gap between stacked segments
 
 /** Colour follows the bucket name, never its position, so filters don't repaint survivors. */
 const BUCKET_CLASS: Record<string, string> = {
-  'Fixed Essential': 'fill-s1',
-  'Variable Essential': 'fill-s2',
-  Discretionary: 'fill-s3',
-  Other: 'fill-s4',
+  'Fixed Essential': 'fill-fixed',
+  'Variable Essential': 'fill-variable',
+  Discretionary: 'fill-disc',
+  Other: 'fill-other-bucket',
+  [NO_BUCKET]: 'fill-none',
 };
-const EXTRA = ['fill-s5', 'fill-s6', 'fill-s7', 'fill-s8'];
+const EXTRA = ['fill-x1', 'fill-x2'];
 export function bucketClass(bucket: string, all: string[]): string {
   if (BUCKET_CLASS[bucket]) return BUCKET_CLASS[bucket];
   const extras = all.filter((b) => !BUCKET_CLASS[b]).sort();
-  return EXTRA[extras.indexOf(bucket) % EXTRA.length] ?? 'fill-s8';
+  return EXTRA[Math.max(0, extras.indexOf(bucket)) % EXTRA.length];
 }
 
 interface Seg {

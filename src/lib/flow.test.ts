@@ -67,6 +67,22 @@ describe('buildFlow', () => {
     expect(simple.nodes.map((n) => n.column)).not.toContain(3);
   });
 
+  it('calls the bucket "Spent" when no row has a bucket', () => {
+    const noBuckets = data.map((t) => ({ ...t, bucket: '' }));
+    const g2 = buildFlow(noBuckets);
+    const buckets = g2.nodes.filter((n) => n.role === 'bucket');
+    expect(buckets).toHaveLength(1);
+    expect(buckets[0]).toMatchObject({ label: 'Spent', match: { kind: 'expense' } });
+    // Drilling a Spent → category flow doesn't add a "(none)" bucket step.
+    const link = g2.links.find((l) => l.target === 'cat|Supermarket')!;
+    expect(flowDrillSteps(link.match)).toEqual([{ dim: 'category', value: 'Supermarket' }]);
+  });
+
+  it('calls it "No bucket" when only some rows lack one', () => {
+    const mixed = [...data, tx({ category: 'Misc', amount: -40 })];
+    expect(buildFlow(mixed).nodes.find((n) => n.id === 'bucket|(none)')!.label).toBe('No bucket');
+  });
+
   it('is empty without data', () => {
     expect(buildFlow([]).nodes).toEqual([]);
   });

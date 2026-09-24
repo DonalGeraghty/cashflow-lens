@@ -4,7 +4,9 @@ import { sankey, sankeyLinkHorizontal, type SankeyLink, type SankeyNode } from '
 import { useElementWidth } from '../hooks/useElementWidth';
 import { useLatest } from '../hooks/useLatest';
 import type { FlowGraph, FlowLink, FlowNode } from '../lib/flow';
+import { NO_BUCKET } from '../lib/filters';
 import { bucketClass } from './BucketChart';
+import { fillVar } from './colors';
 import { motion, textWidth, truncate } from './core';
 import { bindMarkEvents } from './interactions';
 import { useTooltip } from './useTooltip';
@@ -65,7 +67,9 @@ export function SankeyChart({ graph, formatValue, nodeTooltip, linkTooltip, onSe
 
     // nodeSort/linkSort(null) keep the order buildFlow chose (buckets in their
     // usual order, categories grouped under their bucket) so flows don't cross.
-    const padding = Math.min(14, Math.max(6, innerH / busiest / 3));
+    // Leave a full label's height between nodes (the chart is sized so this fits),
+    // so even the thinnest category keeps a readable label.
+    const padding = Math.min(LABEL_H, Math.max(4, innerH / busiest / 2));
     const generator = sankey<FlowNode, FlowLink>()
       .nodeId((d) => d.id)
       .nodeAlign((n) => layers.indexOf(n.column))
@@ -83,27 +87,37 @@ export function SankeyChart({ graph, formatValue, nodeTooltip, linkTooltip, onSe
     });
 
     const buckets = graph.nodes.filter((n) => n.role === 'bucket').map((n) => n.bucket!);
+    // No bucket data at all: the lone "Spent" node takes the app's spending colour.
+    const bucketFill = (b: string) => (buckets.length === 1 && b === NO_BUCKET ? 'fill-spend' : bucketClass(b, buckets));
+    // Money coming in wears the income colour: sources, the Income node and the flows between them.
+    const INCOME_FILL = 'fill-income';
     const nodeCls = (n: FlowNode): string => {
       switch (n.role) {
+        case 'source':
+          return INCOME_FILL;
+        case 'hub':
+          // The root is "Spending" (not income) when the selection has no income.
+          return n.id === 'hub' ? INCOME_FILL : 'fill-total';
         case 'bucket':
         case 'category':
-          return bucketClass(n.bucket!, buckets);
+          return bucketFill(n.bucket!);
         case 'saved':
-          return 'fill-s7';
+          return 'fill-saved';
         case 'deficit':
           return 'fill-up';
         default:
           return 'fill-total';
       }
     };
-    // "fill-s1" -> "var(--s1)": links are tinted with their flow's colour.
-    const cssVar = (cls: string) => `var(--${cls.slice(5)})`;
+    // Links are tinted with their flow's colour (fill class -> CSS variable).
+    const cssVar = fillVar;
     const linkColour = (l: SLink) => {
       const s = l.source as SNode;
       const t = l.target as SNode;
-      if (l.bucket) return cssVar(bucketClass(l.bucket, buckets));
-      if (t.role === 'saved') return cssVar('fill-s7');
+      if (l.bucket) return cssVar(bucketFill(l.bucket));
+      if (t.role === 'saved') return cssVar('fill-saved');
       if (s.role === 'deficit') return cssVar('fill-up');
+      if (s.role === 'source') return cssVar(INCOME_FILL);
       return cssVar('fill-total');
     };
 

@@ -14,28 +14,33 @@
   --grid: #e1e0d9;
   --axis: #c3c2b7;
   --border: rgba(11, 11, 11, 0.1);
-  --accent: #2a78d6;
+  --accent: #3d62fb;
   --accent-ink: #ffffff;
   --danger: #d03b3b;
   --warn-bg: #fff4d6;
   --warn-ink: #5c4300;
 
-  /* Categorical slots (fixed order, validated for colour-vision deficiency) */
-  --s1: #2a78d6; /* blue: income */
-  --s2: #eb6834; /* orange: spending */
-  --s3: #1baf7a; /* aqua: net savings */
-  --s4: #eda100;
-  --s5: #e87ba4;
-  --s6: #008300;
-  --s7: #4a3aa7;
-  --s8: #e34948;
+  /* "Jewel" chart theme. One colour per role (not a shared slot list), so income
+     never looks like a bucket. Every set of colours that appears together was
+     validated (lightness band, chroma floor, CVD + normal-vision separation,
+     contrast) with the dataviz palette validator, in both modes. */
+  --income: #1bc87f; /* emerald: money in */
+  --spend: #cc102f; /* ruby: money out */
+  --saved: #df9a17; /* gold: savings / net */
+  --b-fixed: #3d62fb; /* sapphire */
+  --b-variable: #1bbcec; /* sky */
+  --b-disc: #aa20fb; /* amethyst */
+  --b-other: #e616ba; /* pink */
+  --b-none: #8a8f98; /* slate: rows without a bucket */
+  --b-x1: #0f9f8f; /* extra bucket names */
+  --b-x2: #7a8c12;
   --other: #b4b2aa;
 
-  /* Diverging pair for "change": more spending = red, less = blue */
-  --up: #e34948;
-  --down: #2a78d6;
-  --heat-pos: #2a78d6;
-  --heat-neg: #e34948;
+  /* "What changed": spent more = ruby, spent less = emerald */
+  --up: #cc102f;
+  --down: #1bc87f;
+  --heat-pos: #3d62fb;
+  --heat-neg: #cc102f;
   --total: #7d7c76; /* neutral for waterfall totals */
 
   --radius: 10px;
@@ -55,22 +60,24 @@
     --grid: #2c2c2a;
     --axis: #383835;
     --border: rgba(255, 255, 255, 0.1);
-    --accent: #3987e5;
+    --accent: #3b60fb;
     --warn-bg: #3a2f10;
     --warn-ink: #f5dc9a;
-    --s1: #3987e5;
-    --s2: #d95926;
-    --s3: #199e70;
-    --s4: #c98500;
-    --s5: #d55181;
-    --s6: #008300;
-    --s7: #9085e9;
-    --s8: #e66767;
+    --income: #16aa6b;
+    --spend: #d11131;
+    --saved: #be8211;
+    --b-fixed: #3b60fb;
+    --b-variable: #159fc9;
+    --b-disc: #a615f6;
+    --b-other: #d614ad;
+    --b-none: #7d828b;
+    --b-x1: #12988a;
+    --b-x2: #8a9c1a;
     --other: #5b5a55;
-    --up: #e66767;
-    --down: #3987e5;
-    --heat-pos: #3987e5;
-    --heat-neg: #e66767;
+    --up: #d11131;
+    --down: #16aa6b;
+    --heat-pos: #3b60fb;
+    --heat-neg: #d11131;
     --total: #8f8e87;
     --shadow: none;
   }
@@ -86,22 +93,24 @@
   --grid: #2c2c2a;
   --axis: #383835;
   --border: rgba(255, 255, 255, 0.1);
-  --accent: #3987e5;
+  --accent: #3b60fb;
   --warn-bg: #3a2f10;
   --warn-ink: #f5dc9a;
-  --s1: #3987e5;
-  --s2: #d95926;
-  --s3: #199e70;
-  --s4: #c98500;
-  --s5: #d55181;
-  --s6: #008300;
-  --s7: #9085e9;
-  --s8: #e66767;
+  --income: #16aa6b;
+  --spend: #d11131;
+  --saved: #be8211;
+  --b-fixed: #3b60fb;
+  --b-variable: #159fc9;
+  --b-disc: #a615f6;
+  --b-other: #d614ad;
+  --b-none: #7d828b;
+  --b-x1: #12988a;
+  --b-x2: #8a9c1a;
   --other: #5b5a55;
-  --up: #e66767;
-  --down: #3987e5;
-  --heat-pos: #3987e5;
-  --heat-neg: #e66767;
+  --up: #d11131;
+  --down: #16aa6b;
+  --heat-pos: #3b60fb;
+  --heat-neg: #d11131;
   --total: #8f8e87;
   --shadow: none;
 }
@@ -626,21 +635,21 @@ main {
 }
 
 /* Fill classes are shared by SVG marks (fill) and HTML swatches (background). */
-.fill-income { fill: var(--s1); background: var(--s1); }
-.fill-spend { fill: var(--s2); background: var(--s2); }
-.fill-s1 { fill: var(--s1); background: var(--s1); }
-.fill-s2 { fill: var(--s2); background: var(--s2); }
-.fill-s3 { fill: var(--s3); background: var(--s3); }
-.fill-s4 { fill: var(--s4); background: var(--s4); }
-.fill-s5 { fill: var(--s5); background: var(--s5); }
-.fill-s6 { fill: var(--s6); background: var(--s6); }
-.fill-s7 { fill: var(--s7); background: var(--s7); }
-.fill-s8 { fill: var(--s8); background: var(--s8); }
+.fill-income { fill: var(--income); background: var(--income); }
+.fill-spend { fill: var(--spend); background: var(--spend); }
+.fill-saved { fill: var(--saved); background: var(--saved); }
+.fill-fixed { fill: var(--b-fixed); background: var(--b-fixed); }
+.fill-variable { fill: var(--b-variable); background: var(--b-variable); }
+.fill-disc { fill: var(--b-disc); background: var(--b-disc); }
+.fill-other-bucket { fill: var(--b-other); background: var(--b-other); }
+.fill-none { fill: var(--b-none); background: var(--b-none); }
+.fill-x1 { fill: var(--b-x1); background: var(--b-x1); }
+.fill-x2 { fill: var(--b-x2); background: var(--b-x2); }
 .fill-muted { fill: var(--other); background: var(--other); }
-.fill-total { fill: var(--total); background: var(--total); }
 .fill-up { fill: var(--up); background: var(--up); }
 .fill-down { fill: var(--down); background: var(--down); }
-.stroke-net { background: var(--s3); }
+.fill-total { fill: var(--total); background: var(--total); }
+.stroke-net { background: var(--saved); }
 
 .stage {
   position: relative;
@@ -726,12 +735,12 @@ path.bar.highlight {
 /* Sankey */
 .flow-link {
   fill: none;
-  stroke-opacity: 0.35;
+  stroke-opacity: 0.5;
   transition: stroke-opacity 0.15s;
 }
 .flow-link:hover,
 .flow-link:focus-visible {
-  stroke-opacity: 0.65;
+  stroke-opacity: 0.8;
   outline: none;
 }
 .flow-node {
@@ -776,14 +785,14 @@ path.bar.highlight {
 }
 .line-net {
   fill: none;
-  stroke: var(--s3);
+  stroke: var(--saved);
   stroke-width: 2px;
   stroke-linejoin: round;
   stroke-linecap: round;
   pointer-events: none;
 }
 .dot-net {
-  fill: var(--s3);
+  fill: var(--saved);
   stroke: var(--surface);
   stroke-width: 2px;
   pointer-events: none;
@@ -1184,7 +1193,7 @@ dialog.peek::backdrop {
   align-items: flex-start;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--s3);
+  border-left: 4px solid var(--income);
   border-radius: 8px;
   padding: 0.6rem 0.6rem 0.6rem 0.8rem;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);

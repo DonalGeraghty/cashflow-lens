@@ -49,7 +49,7 @@ export function weekdayOf(year: number, month: number, day: number): string {
   return WEEKDAYS[(js + 6) % 7];
 }
 
-const daysInMonth = (year: number, month: number) => new Date(Date.UTC(year, month, 0)).getUTCDate();
+export const daysInMonth = (year: number, month: number) => new Date(Date.UTC(year, month, 0)).getUTCDate();
 
 const validYear = (y: number) => y >= 1970 && y <= 2100;
 

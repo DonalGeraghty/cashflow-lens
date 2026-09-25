@@ -10,6 +10,7 @@ import {
   VALUE_FIELDS,
   type AggFn,
   type PivotField,
+  type PivotNode,
   type ValueField,
   accValue,
   cellTransactions,
@@ -25,7 +26,8 @@ import {
 import { formatMoney, formatNumber } from '../../lib/format';
 import { MultiSelect } from '../MultiSelect';
 import { Panel } from '../Panel';
-import { PivotTable } from './PivotTable';
+import { PivotTable, type BudgetCell } from './PivotTable';
+import { findBudget, monthsSpanned } from '../../lib/budget';
 
 export function PivotView() {
   const config = useAppStore((s) => s.pivot);
@@ -36,6 +38,7 @@ export function PivotView() {
   const deletePivot = useAppStore((s) => s.deletePivot);
   const { filtered, currency } = useData();
   const peek = usePeek();
+  const budgets = useAppStore((s) => s.budgets);
   const [layoutName, setLayoutName] = useState('');
   const [selectedLayout, setSelectedLayout] = useState('');
 
@@ -56,6 +59,29 @@ export function PivotView() {
     const max = d3.max(vals) ?? 0;
     return max > 0 ? d3.scaleSqrt([0, max], [0, 1]).clamp(true) : null;
   }, [rows, result, config.heatmap, config.cols.length, config.agg]);
+
+  // Budget vs actual: top-level rows that are categories or buckets, measuring summed spending.
+  const budgetDim = config.rows[0] === 'category' ? 'category' : config.rows[0] === 'bucket' ? 'bucket' : null;
+  const budgetHint = !budgetDim
+    ? 'Needs Category or Spending bucket as the first row field'
+    : config.value !== 'spend' || config.agg !== 'sum'
+      ? 'Needs value "Spending" with Sum'
+      : !budgets.some((b) => b.dim === budgetDim)
+        ? `No ${budgetDim} budgets yet (see the Budgets tab)`
+        : null;
+  const monthsInView = useMemo(() => monthsSpanned(filtered.filter((t) => !t.future)), [filtered]);
+  const budgetFor =
+    config.budget && !budgetHint && budgetDim
+      ? (node: PivotNode): BudgetCell | null => {
+          if (node.depth !== 1) return null;
+          const b = findBudget(budgets, budgetDim, node.path[0]);
+          if (!b) return null;
+          const limit = b.amount * monthsInView;
+          const spent = accValue(node.total, 'sum') ?? 0;
+          // Over a whole period there's no "at risk": you're either within budget or over it.
+          return { limit, spent, state: spent > limit + 0.005 ? 'over' : 'ok' };
+        }
+      : undefined;
 
   const used = new Set<PivotField>([...config.rows, ...config.cols]);
   const addable = PIVOT_FIELDS.filter((f) => !used.has(f.id));
@@ -128,6 +154,11 @@ export function PivotView() {
             <input type="checkbox" checked={config.heatmap} onChange={(e) => setPivot({ heatmap: e.target.checked })} />
             Colour shading
           </label>
+          <label className="toggle" title={budgetHint ?? 'Compare each row with its monthly budget × the months in view'}>
+            <input type="checkbox" checked={Boolean(config.budget)} disabled={Boolean(budgetHint)} onChange={(e) => setPivot({ budget: e.target.checked })} />
+            Budget vs actual
+          </label>
+          {config.budget && budgetHint && <span className="muted small">{budgetHint}</span>}
         </div>
         <div className="config-group">
           <h3>Filters</h3>
@@ -241,6 +272,7 @@ export function PivotView() {
         }
         onSort={(by) => setPivot({ sort: { by, dir: config.sort.by === by && config.sort.dir === 'desc' ? 'asc' : 'desc' } })}
         onCell={(rowPath, colPath) => peek(describe(rowPath, colPath), cellTransactions(filtered, config, rowPath, colPath))}
+        budgetFor={budgetFor}
       />
     </Panel>
   );

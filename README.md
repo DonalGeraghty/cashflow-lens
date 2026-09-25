@@ -188,6 +188,12 @@ in the top bar reloads it whenever you like.
 - **Money flow**: a Sankey diagram of income sources → Income → spending buckets (plus Saved) →
   categories, where flow width shows the money. If you spent more than you earned, a
   *From savings* flow makes up the difference. Click a node or flow to drill in.
+- **Budgets**: a monthly limit per category or bucket, with a progress bar, a "spending evenly"
+  marker and a status: ✓ on track, ! at risk (the current pace would overshoot), ✕ over.
+  - Pace only applies to spread-out spending. A rent or bill paid in one go is just "fully used".
+  - **Suggest budgets for my top categories** starts you off at your typical spending.
+  - Budgets also appear in the Money flow tooltips (scaled to the months in view) and in the
+    pivot. Turn on **Budget vs actual** with Category or Spending bucket as the first row field.
 - **Rules**: under **Data & rules**, keyword and regex rules fill in missing categories (or
   override the CSV's categories if you switch that on). The first matching rule wins. Changes
   apply immediately and are saved.
@@ -213,6 +219,7 @@ src/
     pivot.ts        pivot engine: tree, subtotals, sorting, drill-through, export
     waterfall.ts    waterfall steps (net by month; income → categories → net)
     flow.ts         Sankey graph (income → buckets → categories)
+    budget.ts       budget status (spent, pace, days left), suggestions
   store/        Zustand store (single source of truth) + derived-data context
   hooks/        data loading (CSV / demo / Sheets), URL sync, theme, resize, peek
   charts/       D3 charts and shared D3 helpers

@@ -22,6 +22,8 @@ export interface DerivedData {
   /** Rows hidden because they're in the future or estimates. */
   hiddenFuture: number;
   currentMonth: string;
+  /** "Now" for the session (fixed at load, so projections don't shift mid-session). */
+  today: Date;
   /** Dominant currency, used for formatting. */
   currency: string;
 }
@@ -63,6 +65,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       },
       hiddenFuture: filters.includeFuture ? 0 : all.length - visible.length,
       currentMonth: monthKey(today.getFullYear(), today.getMonth() + 1),
+      today,
       currency: [...currencies.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'EUR',
     };
   }, [all, filters, drill, today]);

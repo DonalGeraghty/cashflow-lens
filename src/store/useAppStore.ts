@@ -7,8 +7,9 @@ import { DEFAULT_FILTERS, type Filters } from '../lib/filters';
 import { pushSteps, type DrillStep } from '../lib/drill';
 import { DEFAULT_PIVOT, type PivotConfig } from '../lib/pivot';
 import type { ParseReport } from '../lib/parse';
+import type { Budget } from '../lib/budget';
 
-export type Tab = 'dashboard' | 'transactions' | 'pivot' | 'waterfall' | 'flow' | 'data';
+export type Tab = 'dashboard' | 'transactions' | 'pivot' | 'waterfall' | 'flow' | 'budgets' | 'data';
 export type Theme = 'system' | 'light' | 'dark';
 
 export interface SavedPivot {
@@ -37,6 +38,7 @@ export interface AppState {
   rules: CategoryRule[];
   rulesOverride: boolean;
   sheetSource: SheetSource | null;
+  budgets: Budget[];
 
   // ---- view state ----
   filters: Filters;
@@ -54,6 +56,10 @@ export interface AppState {
   clearData: () => void;
   resetEverything: () => void;
   setSheetSource: (s: SheetSource | null) => void;
+
+  addBudget: (b: Omit<Budget, 'id'>) => void;
+  updateBudget: (id: string, patch: Partial<Budget>) => void;
+  removeBudget: (id: string) => void;
 
   addRule: (rule?: Partial<CategoryRule>) => void;
   updateRule: (id: string, patch: Partial<CategoryRule>) => void;
@@ -122,6 +128,7 @@ export const useAppStore = create<AppState>()(
       rules: defaultRules(),
       rulesOverride: false,
       sheetSource: null,
+      budgets: [],
       filters: DEFAULT_FILTERS,
       drill: [],
       pivot: DEFAULT_PIVOT,
@@ -142,6 +149,7 @@ export const useAppStore = create<AppState>()(
           rules: defaultRules(),
           rulesOverride: false,
           sheetSource: null,
+          budgets: [],
           filters: DEFAULT_FILTERS,
           drill: [],
           pivot: DEFAULT_PIVOT,
@@ -151,6 +159,16 @@ export const useAppStore = create<AppState>()(
         });
       },
       setSheetSource: (sheetSource) => set({ sheetSource }),
+
+      addBudget: (b) =>
+        set((s) => ({
+          // One budget per category/bucket: adding again replaces the amount.
+          budgets: s.budgets.some((x) => x.dim === b.dim && x.value === b.value)
+            ? s.budgets.map((x) => (x.dim === b.dim && x.value === b.value ? { ...x, amount: b.amount } : x))
+            : [...s.budgets, { ...b, id: uid() }],
+        })),
+      updateBudget: (id, patch) => set((s) => ({ budgets: s.budgets.map((b) => (b.id === id ? { ...b, ...patch } : b)) })),
+      removeBudget: (id) => set((s) => ({ budgets: s.budgets.filter((b) => b.id !== id) })),
 
       addRule: (rule) =>
         set((s) => ({
@@ -224,6 +242,7 @@ export const useAppStore = create<AppState>()(
         rules: s.rules,
         rulesOverride: s.rulesOverride,
         sheetSource: s.sheetSource,
+        budgets: s.budgets,
         pivot: s.pivot,
         savedPivots: s.savedPivots,
         theme: s.theme,

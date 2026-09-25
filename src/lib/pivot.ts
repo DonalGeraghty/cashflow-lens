@@ -52,6 +52,8 @@ export interface PivotConfig {
   filters: Partial<Record<PivotField, string[] | null>>;
   sort: PivotSort;
   heatmap: boolean;
+  /** Add Budget / Used columns (rows grouped by category or bucket, value = spending sum). */
+  budget?: boolean;
   /** Ids of collapsed row groups. */
   collapsed: string[];
 }

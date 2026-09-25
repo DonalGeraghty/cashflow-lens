@@ -2,6 +2,14 @@ import type { CSSProperties } from 'react';
 import type { ScalePower } from 'd3';
 import { accValue, fieldLabel, type PivotNode, type PivotResult, type PivotRow } from '../../lib/pivot';
 
+export interface BudgetCell {
+  limit: number;
+  spent: number;
+  state: 'ok' | 'over';
+}
+
+const BUDGET_STATE = { ok: '✓', over: '✕' } as const;
+
 interface Props {
   result: PivotResult;
   rows: PivotRow[];
@@ -12,9 +20,11 @@ interface Props {
   onToggle: (id: string) => void;
   onSort: (by: string) => void;
   onCell: (rowPath: string[], colPath: string[] | null) => void;
+  /** When set, adds Budget and Used columns; returns null for rows without a budget. */
+  budgetFor?: (node: PivotNode) => BudgetCell | null;
 }
 
-export function PivotTable({ result, rows, headerRows, format, heat, onToggle, onSort, onCell }: Props) {
+export function PivotTable({ result, rows, headerRows, format, heat, onToggle, onSort, onCell, budgetFor }: Props) {
   const { config, colKeys, colIds, root } = result;
   const hasCols = config.cols.length > 0;
   const sortMark = (by: string) => (config.sort.by === by ? (config.sort.dir === 'asc' ? ' ▲' : ' ▼') : '');
@@ -44,6 +54,26 @@ export function PivotTable({ result, rows, headerRows, format, heat, onToggle, o
     );
   };
 
+  const budgetCells = (node: PivotNode) => {
+    if (!budgetFor) return null;
+    const b = budgetFor(node);
+    return (
+      <>
+        <td className="num budget-col">{b ? format(b.limit) : ''}</td>
+        <td className={`num budget-col${b ? ` budget-cell state-${b.state}` : ''}`}>
+          {b ? (
+            <span title={b.state === 'over' ? `Over by ${format(b.spent - b.limit)}` : `${format(b.limit - b.spent)} left`}>
+              <span aria-hidden="true">{BUDGET_STATE[b.state]} </span>
+              {b.limit > 0 ? `${Math.round((b.spent / b.limit) * 100)}%` : '–'}
+            </span>
+          ) : (
+            ''
+          )}
+        </td>
+      </>
+    );
+  };
+
   if (!root.total.count) return <p className="empty">No values for this layout with the current filters.</p>;
 
   return (
@@ -60,6 +90,7 @@ export function PivotTable({ result, rows, headerRows, format, heat, onToggle, o
                   </th>
                 ))}
                 <th className="total" />
+                {budgetFor && <th colSpan={2} className="budget-col" />}
               </tr>
             ))}
           <tr>
@@ -83,6 +114,12 @@ export function PivotTable({ result, rows, headerRows, format, heat, onToggle, o
                 Total{sortMark('total')}
               </button>
             </th>
+            {budgetFor && (
+              <>
+                <th className="num budget-col">Budget</th>
+                <th className="num budget-col">Used</th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -99,6 +136,7 @@ export function PivotTable({ result, rows, headerRows, format, heat, onToggle, o
               </th>
               {hasCols && colIds.map((_, i) => valueCell(node, i, isGroup))}
               {valueCell(node, null, true)}
+              {budgetCells(node)}
             </tr>
           ))}
         </tbody>
@@ -107,6 +145,7 @@ export function PivotTable({ result, rows, headerRows, format, heat, onToggle, o
             <th scope="row">Grand total</th>
             {hasCols && colIds.map((_, i) => valueCell(root, i, true))}
             {valueCell(root, null, true)}
+            {budgetFor && <td colSpan={2} className="budget-col" />}
           </tr>
         </tfoot>
       </table>

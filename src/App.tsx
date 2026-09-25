@@ -17,6 +17,7 @@ import { Dashboard } from './components/dashboard/Dashboard';
 import { PivotView } from './components/pivot/PivotView';
 import { WaterfallView } from './components/WaterfallView';
 import { FlowView } from './components/FlowView';
+import { BudgetsView } from './components/BudgetsView';
 import { Panel } from './components/Panel';
 
 const TABS: { id: Tab; label: string }[] = [
@@ -25,6 +26,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'pivot', label: 'Pivot' },
   { id: 'waterfall', label: 'Waterfall' },
   { id: 'flow', label: 'Money flow' },
+  { id: 'budgets', label: 'Budgets' },
   { id: 'data', label: 'Data & rules' },
 ];
 
@@ -92,6 +94,7 @@ function Shell() {
             {tab === 'pivot' && <PivotView />}
             {tab === 'waterfall' && <WaterfallView />}
             {tab === 'flow' && <FlowView />}
+            {tab === 'budgets' && <BudgetsView />}
           </>
         )}
       </main>

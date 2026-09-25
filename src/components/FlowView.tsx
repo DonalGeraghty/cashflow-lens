@@ -6,6 +6,8 @@ import { buildFlow, flowDrillSteps, matchesFlow, type FlowLink, type FlowMatch, 
 import { formatMoney, formatPct } from '../lib/format';
 import { SankeyChart } from '../charts/SankeyChart';
 import { TipBody } from '../charts/useTooltip';
+import { findBudget, monthsSpanned } from '../lib/budget';
+import { NO_BUCKET } from '../lib/filters';
 import { Panel, Segmented } from './Panel';
 
 type Detail = 'categories' | 'buckets';
@@ -26,6 +28,10 @@ export function FlowView() {
 
   const money = useCallback((v: number) => formatMoney(v, currency), [currency]);
   const compact = useCallback((v: number) => formatMoney(v, currency, { compact: true }), [currency]);
+  const budgets = useAppStore((s) => s.budgets);
+  // A monthly budget scales to the number of months in view.
+  const monthsInView = useMemo(() => monthsSpanned(filtered.filter((t) => !t.future)), [filtered]);
+
   const rowsFor = useCallback((m: FlowMatch) => filtered.filter((t) => matchesFlow(t, m)), [filtered]);
 
   // Percentages are of income when there is some, else of spending.
@@ -41,9 +47,20 @@ export function FlowView() {
       if (n.role === 'saved' && graph.income > 0) rows.splice(1, 1, ['Savings rate', formatPct(value / graph.income)]);
       if (n.role === 'deficit') rows.push(['Why', 'Spending was more than income, so this came from savings']);
       if (n.match?.merchants) rows.push(['Includes', n.match.merchants.slice(0, 6).join(', ') + (n.match.merchants.length > 6 ? '…' : '')]);
+      const budget =
+        n.role === 'category'
+          ? findBudget(budgets, 'category', n.label)
+          : n.role === 'bucket' && n.bucket && n.bucket !== NO_BUCKET
+            ? findBudget(budgets, 'bucket', n.bucket)
+            : undefined;
+      if (budget && monthsInView > 0) {
+        const limit = budget.amount * monthsInView;
+        rows.push(['Budget', monthsInView > 1 ? `${money(limit)} (${money(budget.amount)}/mo × ${monthsInView})` : money(limit)]);
+        rows.push(['Budget used', `${formatPct(value / limit)}${value > limit ? ` · over by ${money(value - limit)}` : ''}`]);
+      }
       return <TipBody title={n.label} rows={rows} hint={hint(n.match)} />;
     },
-    [money, base, baseName, graph.income],
+    [money, base, baseName, graph.income, budgets, monthsInView],
   );
 
   const linkTooltip = useCallback(
